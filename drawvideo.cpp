@@ -201,8 +201,8 @@ public:
     // This  should be called from renderer thread
     GstVideoBuffer(GstBuffer* buffer, GstVideoMeta* videoMeta) :
         QAbstractPlanarVideoBuffer(HandleType::NoHandle),
-        m_buffer(gst_buffer_ref(buffer)), m_videoMeta(videoMeta),
-        m_mode(QAbstractVideoBuffer::MapMode::NotMapped)
+        m_buffer(gst_buffer_ref(buffer)),
+        m_mode(QAbstractVideoBuffer::MapMode::NotMapped), m_videoMeta(videoMeta)
     {
     }
 
@@ -227,7 +227,7 @@ public:
         if (mode == NotMapped || m_mode != NotMapped) {
             return 0;
         } else {
-            for (int i = 0; i < m_videoMeta->n_planes; i++) {
+            for (guint i = 0; i < m_videoMeta->n_planes; i++) {
                 gst_video_meta_map(m_videoMeta, i, &m_mapInfo[i],
                                    (gpointer*)&data[i], &bytesPerLine[i],
                                    flags);
@@ -247,7 +247,7 @@ public:
     void unmap() override
     {
         if (m_mode != NotMapped) {
-            for (int i = 0; i < m_videoMeta->n_planes; i++) {
+            for (guint i = 0; i < m_videoMeta->n_planes; i++) {
                 gst_video_meta_unmap(m_videoMeta, i, &m_mapInfo[i]);
             }
         }
@@ -290,13 +290,14 @@ appsink_pad_probe(GstPad* pad, GstPadProbeInfo* info, gpointer user_data)
 
 V4L2Source::V4L2Source(QQuickItem* parent) : QQuickItem(parent)
 {
+    ready = false;
     m_surface = nullptr;
     connect(this, &QQuickItem::windowChanged, this, &V4L2Source::setWindow);
 
 //    pipeline = gst_pipeline_new("V4L2Source::pipeline");
 //    v4l2src = gst_element_factory_make("v4l2src", nullptr);
 //    appsink = gst_element_factory_make("appsink", nullptr);
-    pipeline = gst_parse_launch("rtspsrc protocols=tcp name=src ! rtph264depay ! h264parse ! decodebin ! videoconvert ! appsink name=appsink0",
+    pipeline = gst_parse_launch("rtspsrc latency=500 protocols=tcp name=src ! rtph264depay ! h264parse ! decodebin ! videoconvert ! appsink drop=true max-buffers=5 name=appsink0",
                                 nullptr);
     v4l2src = gst_bin_get_by_name(GST_BIN(pipeline), "src");
     appsink = gst_bin_get_by_name(GST_BIN(pipeline), "appsink0");
@@ -334,10 +335,13 @@ void V4L2Source::setVideoSurface(QAbstractVideoSurface* surface)
             ->supportedPixelFormats(
                 QAbstractVideoBuffer::HandleType::EGLImageHandle)
             .size() > 0) {
+//        qDebug() << "egl supported";
         EGLImageSupported = true;
     } else {
         EGLImageSupported = false;
     }
+//    qDebug() << "openGl supported:" << surface->supportedPixelFormats(QAbstractVideoBuffer::HandleType::GLTextureHandle);
+//    qDebug() << "pixmap supported:" << surface->supportedPixelFormats(QAbstractVideoBuffer::HandleType::QPixmapHandle);
 
     if (m_surface && m_device.length() > 0) {
         start();
@@ -449,21 +453,17 @@ void V4L2Source::sync()
         ready = false;
     }
     // pull available sample and convert GstBuffer into a QAbstractVideoBuffer
-    GstElement* _appsink = gst_bin_get_by_name((GstBin*)pipeline, "appsink0");
-    GstSample* sample = gst_app_sink_pull_sample(GST_APP_SINK(_appsink));
+    //GstElement* _appsink = gst_bin_get_by_name((GstBin*)pipeline, "appsink0");
+    GstSample* sample = gst_app_sink_pull_sample(GST_APP_SINK(appsink));
     GstBuffer* buffer = gst_sample_get_buffer(sample);
     GstVideoMeta* videoMeta = gst_buffer_get_video_meta(buffer);
 
     // if memory is DMABUF and EGLImage is supported by the backend,
     // create video buffer with EGLImage handle
     videoFrame.reset();
-    if (EGLImageSupported && buffer_is_dmabuf(buffer)) {
-        videoBuffer.reset(new GstDmaVideoBuffer(buffer, videoMeta));
-    } else {
         // TODO: support other memory types, probably GL textures?
         // just map memory
-        videoBuffer.reset(new GstVideoBuffer(buffer, videoMeta));
-    }
+    videoBuffer.reset(new GstVideoBuffer(buffer, videoMeta));
 
     QSize size = QSize(videoMeta->width, videoMeta->height);
     QVideoFrame::PixelFormat format =

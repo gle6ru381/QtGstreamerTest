@@ -2,9 +2,11 @@ QT += qml quick gui multimedia
 
 CONFIG += c++11
 CONFIG += link_pkgconfig
+QMAKE_CXXFLAGS += -O3
+QMAKE_CFLAGS += -O3
 
 PKGCONFIG += gstreamer-1.0 glib-2.0 gobject-2.0 gstreamer-app-1.0 gstreamer-video-1.0 gstreamer-rtsp-1.0 gstreamer-rtp-1.0 \
-gstreamer-pbutils-1.0 gstreamer-allocators-1.0
+gstreamer-pbutils-1.0 gstreamer-allocators-1.0 opencv4
 
 LIBS += -lEGL
 
