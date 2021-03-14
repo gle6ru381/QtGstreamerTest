@@ -461,22 +461,29 @@ void V4L2Source::sync()
     // if memory is DMABUF and EGLImage is supported by the backend,
     // create video buffer with EGLImage handle
     videoFrame.reset();
+    //m_surface->present(*videoFrame);
         // TODO: support other memory types, probably GL textures?
         // just map memory
-    videoBuffer.reset(new GstVideoBuffer(buffer, videoMeta));
+    auto buff = new GstVideoBuffer(buffer, videoMeta);
+    //videoBuffer.reset(new GstVideoBuffer(buffer, videoMeta));
 
     QSize size = QSize(videoMeta->width, videoMeta->height);
     QVideoFrame::PixelFormat format =
         gst_video_format_to_qvideoformat(videoMeta->format);
 
     videoFrame.reset(new QVideoFrame(
-        static_cast<QAbstractVideoBuffer*>(videoBuffer.get()), size, format));
+        static_cast<QAbstractVideoBuffer*>(buff), size, format));
 
     if (!m_surface->isActive()) {
         m_format = QVideoSurfaceFormat(size, format);
         Q_ASSERT(m_surface->start(m_format) == true);
     }
     m_surface->present(*videoFrame);
+
+    if (videoBuffer)
+        delete videoBuffer;
+    videoBuffer = buff;
+
     gst_sample_unref(sample);
 }
 

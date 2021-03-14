@@ -74,7 +74,8 @@ private:
     int fd;
     bool ready;
     QVideoSurfaceFormat m_format;
-    QSharedPointer<QAbstractVideoBuffer> videoBuffer;
+    QAbstractVideoBuffer* videoBuffer = nullptr;
+    //QSharedPointer<QAbstractVideoBuffer> videoBuffer;
     QSharedPointer<QVideoFrame> videoFrame;
     QMutex mutex;
     std::future<void> worker_handle;
