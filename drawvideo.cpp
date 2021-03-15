@@ -213,6 +213,7 @@ public:
 
     void release() override
     {
+        delete this;
     }
 
     int map(MapMode mode,
@@ -464,7 +465,7 @@ void V4L2Source::sync()
     //m_surface->present(*videoFrame);
         // TODO: support other memory types, probably GL textures?
         // just map memory
-    auto buff = new GstVideoBuffer(buffer, videoMeta);
+    videoBuffer = new GstVideoBuffer(buffer, videoMeta);
     //videoBuffer.reset(new GstVideoBuffer(buffer, videoMeta));
 
     QSize size = QSize(videoMeta->width, videoMeta->height);
@@ -472,7 +473,7 @@ void V4L2Source::sync()
         gst_video_format_to_qvideoformat(videoMeta->format);
 
     videoFrame.reset(new QVideoFrame(
-        static_cast<QAbstractVideoBuffer*>(buff), size, format));
+        static_cast<QAbstractVideoBuffer*>(videoBuffer), size, format));
 
     if (!m_surface->isActive()) {
         m_format = QVideoSurfaceFormat(size, format);
@@ -480,9 +481,9 @@ void V4L2Source::sync()
     }
     m_surface->present(*videoFrame);
 
-    if (videoBuffer)
-        delete videoBuffer;
-    videoBuffer = buff;
+//    if (videoBuffer)
+//        delete videoBuffer;
+//    videoBuffer = buff;
 
     gst_sample_unref(sample);
 }

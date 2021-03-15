@@ -23,19 +23,19 @@ Window {
     DrawVideo {
         id: camera2
         device: "rtsp://193.19.103.188:1935/live/Pervomay_GerRev_NTK.stream"
-        //onFrameReady: vOut.update()
+        onFrameReady: vOut.update()
     }
 
     DrawVideo {
         id: camera3
         device: "rtsp://193.19.103.188:1935/live/Pl_Lunincev.stream"
-        //onFrameReady: vOut1.update()
+        onFrameReady: vOut1.update()
     }
 
     DrawVideo {
         id: camera4
         device: "rtsp://193.19.103.188:1935/live/Pl_Lunincev.stream"
-        //onFrameReady: vOut2.update()
+        onFrameReady: vOut2.update()
     }
 
 //    MediaPlayer {
